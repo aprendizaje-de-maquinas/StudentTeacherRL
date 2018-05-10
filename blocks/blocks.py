@@ -8,6 +8,32 @@ class Direction(object):
     DOWN  = 3
     RIGHT = 4
 
+    def __init__(self):
+        self.v = Direction.UP
+        return
+
+    def next(self):
+        if self.v + 1 > Direction.RIGHT:
+            self.v = Direction.UP
+        else :
+            self.v += 1
+
+    def prev(self):
+        if self.v == 0:
+            self.v = Direction.RIGHT
+        else:
+            self.v -= 1
+
+    def __repr__(self):
+        if self.v == Direction.UP:
+            return 'UP'
+        elif self.v == Direction.LEFT:
+            return 'LEFT'
+        elif self.v == Direction.DOWN:
+            return 'DOWN'
+        else:
+            return 'RIGHT'
+
 '''
    Simple class to hold the current world location
    complete with x,y coordinates and direction for printing
@@ -18,12 +44,12 @@ class Position(object):
         self.x = x
         self.y = y
 
-        self.orientation = Direction.UP
+        self.orientation = Direction()
         self._repr = ['UP', 'LEFT', 'DOWN', 'RIGHT']
 
 
     def __repr__(self):
-        return '({} , {}) In Direction: {}'.format(self.x, self.y, self._repr[self.orientation - 1 ])
+        return '({} , {}) In Direction: {}'.format(self.x, self.y, self.orientation)
 
 '''
    Global location of the agent
@@ -117,10 +143,7 @@ class IterForBlock(object):
 class TurnLeft(MovementBlock):
 
     def __call__(self):
-
-        self.position.orientation += 1
-        if self.position.orientation == Direction.RIGHT + 1:
-            self.position.orientation = Direction.UP
+        Direction.next(self.position.orientation)
 
     def __repr__(self, indent=0):
         return ''.join(['\t' for _ in range(indent)]) + 'TurnLeft()'
@@ -132,14 +155,11 @@ class TurnLeft(MovementBlock):
 class TurnRight(MovementBlock):
 
     def __call__(self):
-
-        self.position.orientation -= 1
-        if self.position.orientation == 0:
-            self.position.orientation = Direction.RIGHT
+        Direction.prev(self.position.orientation)
 
     def __repr__(self, indent=0):
 
-        return ''.join(['\t' for _ in range(indent)]) + 'TurnLeft()'
+        return ''.join(['\t' for _ in range(indent)]) + 'TurnRight()'
 
 '''
    Allows the agent to move forward in the environment
@@ -151,7 +171,7 @@ class ForwardBlock(MovementBlock):
 
     def __call__(self):
 
-        orientation = self.position.orientation
+        orientation = self.position.orientation.v
         if orientation == Direction.UP:
             self.position.y += 1
         elif orientation == Direction.LEFT:
@@ -281,6 +301,8 @@ if __name__ == '__main__':
     for _ in range(7):
         s_block.stack(ForwardBlock())
         s_block.stack(TurnLeft())
+        s_block.stack(TurnRight())
+
         #s_block.stack(BackwardBlock())
 
     for_block = RangeForBlock(0, 1, 1, s_block)
