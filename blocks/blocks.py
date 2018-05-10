@@ -1,5 +1,3 @@
-position = 0
-
 class Position(object):
 
     def __init__(self, x=0, y=0):
@@ -10,6 +8,12 @@ class Position(object):
         return '({} , {})'.format(self.x, self.y)
 
 location = Position()
+
+class MovementBlock(object):
+
+    def __init__(self):
+        self.position = location
+        return
 
 
 class RangeForBlock(object):
@@ -45,11 +49,7 @@ class IterForBlock(object):
         return 'for i in {}'.format(self.iterable) + '\n' + self.body.__repr__()
 '''
 
-class ForwardBlock(object):
-
-    def __init__(self):
-        self.position = location
-        return
+class ForwardBlock(MovementBlock):
 
     def __call__(self):
         self.position.y += 1
@@ -58,11 +58,7 @@ class ForwardBlock(object):
     def __repr__(self):
         return '\tForward()'
 
-class BackwardBlock(object):
-
-    def __init__(self):
-        self.position = location
-        return
+class BackwardBlock(MovementBlock):
 
     def __call__(self):
         self.position.y -= 1
@@ -71,11 +67,7 @@ class BackwardBlock(object):
     def __repr__(self):
         return '\tBackward()'
 
-class LeftBlock(object):
-
-    def __init__(self):
-        self.position = location
-        return
+class LeftBlock(MovementBlock):
 
     def __call__(self):
         self.position.x -= 1
@@ -83,6 +75,15 @@ class LeftBlock(object):
 
     def __repr__(self):
         return '\tLeft()'
+
+class RightBlock(MovementBlock):
+
+    def __call__(self):
+        self.position.x += 1
+        return
+
+    def __repr__(self):
+        return '\tRight()'
 
 class StackedBlock(object):
 
