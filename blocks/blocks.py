@@ -1,4 +1,20 @@
 '''
+TODO:
+
+add conditional blocks.
+
+HitWall()
+NotAtTarget()
+ForwardClear()
+LeftClear()
+RightClear()
+BackClear()
+
+any else?
+'''
+
+
+'''
    Simple class to hold an enum of the direction
    we arecurrently facing
 '''
@@ -45,8 +61,6 @@ class Position(object):
         self.y = y
 
         self.orientation = Direction()
-        self._repr = ['UP', 'LEFT', 'DOWN', 'RIGHT']
-
 
     def __repr__(self):
         return '({} , {}) In Direction: {}'.format(self.x, self.y, self.orientation)
@@ -67,6 +81,75 @@ class MovementBlock(object):
         return
 
 '''
+   Used for building out empty control structures
+   does nothing!
+'''
+class NullBlock(object):
+
+    def __init__(self):
+        return
+
+    def __call__(self):
+        return
+
+    def __repr__(self, indent=0):
+        return ''.join(['\t' for _ in range(indent)]) + 'pass'
+
+'''
+   Simple if else class
+'''
+class IfElseBlock(object):
+
+    def __init__(self, cond, ifbody=None, elsebody=None):
+
+        if ifbody is None: self._if = NullBlock()
+        else: self._if = ifbody
+        
+        if elsebody is None: self._else = NullBlock()
+        else: self._else = elsebody
+        
+        self.cond = cond
+        
+        return
+
+    def __call__(self):
+        if self.cond:
+            self._if()
+        else:
+            self._else()
+
+        return
+
+    def __repr__(self, indent=0):    
+        return ''.join(['\t' for _ in range(indent)]) + 'if ' + self.cond + ':\n' + \
+            self._if.__repr__(indent + 1) + '\n' + \
+            ''.join(['\t' for _ in range(indent)]) + 'else:\n' + self._else.__repr__(indent+1)
+
+'''
+   Simple if class
+'''
+class IfBlock(object):
+
+    def __init__(self, cond, ifbody=None):
+
+        if ifbody is None: self._if = NullBlock()
+        else: self._if = ifbody
+        
+        self.cond = cond
+        
+        return
+
+    def __call__(self):
+        if self.cond:
+            self._if()
+
+        return
+
+    def __repr__(self, indent=0):    
+        return ''.join(['\t' for _ in range(indent)]) + 'if ' + self.cond + ':\n' + \
+            self._if.__repr__(indent + 1)
+            
+'''
    Implements a for loop over a range
    Goes from the lowerbound to upper bound with a given
    step size just like a regular pythonic for loop would
@@ -78,12 +161,14 @@ class MovementBlock(object):
 '''
 class RangeForBlock(object):
 
-    def __init__(self, lowerBound, upperBound, step, body):
+    def __init__(self, lowerBound, upperBound, step, body=None):
         self.lowerBound = lowerBound
         self.upperBound = upperBound
         self.step = step
 
-        self.body = body
+        if body is None: self.body = NullBlock()
+        else: self.body = body
+        
         return
 
     def __call__(self):
@@ -100,10 +185,12 @@ class RangeForBlock(object):
 
 class WhileBlock(object):
 
-    def __init__(self, cond, body):
+    def __init__(self, cond, body=None):
         self.cond = cond
 
-        self.body = body
+        if body is None: self.body = NullBlock()
+        else: self.body = body
+        
         return
 
     def __call__(self):
@@ -117,6 +204,8 @@ class WhileBlock(object):
 
         return tabs + 'while {}:'.format(self.cond) + '\n' + self.body.__repr__(indent=indent+1)
 
+
+    
 '''
    Maybe for the future an iteration over an iterable in the same
    vane as the RangeForBlock
@@ -135,6 +224,8 @@ class IterForBlock(object):
     def __repr__(self):
         return 'for i in {}'.format(self.iterable) + '\n' + self.body.__repr__()
 '''
+
+
 
 '''
    Allows the agent to turn left in the environment
@@ -195,6 +286,9 @@ class ForwardBlock(MovementBlock):
 '''
 class BackwardBlock(MovementBlock):
 
+    def __init__(self):
+        super().__init__()
+        
     def __call__(self):
         orientation = self.position.orientation
         if orientation == Direction.UP:
@@ -302,6 +396,7 @@ if __name__ == '__main__':
         s_block.stack(ForwardBlock())
         s_block.stack(TurnLeft())
         s_block.stack(TurnRight())
+        s_block.stack(IfElseBlock('test'))
 
         #s_block.stack(BackwardBlock())
 
