@@ -1,21 +1,55 @@
+'''
+   Simple class to hold an enum of the direction
+   we arecurrently facing
+'''
+class Direction(object):
+    UP    = 1
+    LEFT  = 2
+    DOWN  = 3
+    RIGHT = 4
+
+'''
+   Simple class to hold the current world location
+   complete with x,y coordinates and direction for printing
+'''
 class Position(object):
 
     def __init__(self, x=0, y=0):
         self.x = x
         self.y = y
 
-    def __repr__(self):
-        return '({} , {})'.format(self.x, self.y)
+        self.orientation = Direction.UP
+        self._repr = ['UP', 'LEFT', 'DOWN', 'RIGHT']
 
+
+    def __repr__(self):
+        return '({} , {}) In Direction: {}'.format(self.x, self.y, self._repr[self.orientation - 1 ])
+
+'''
+   Global location of the agent
+'''
 location = Position()
 
+'''
+   Meta class for blocks that need knowledge of the
+   location in the world to simplify their code
+'''
 class MovementBlock(object):
 
     def __init__(self):
         self.position = location
         return
 
+'''
+   Implements a for loop over a range
+   Goes from the lowerbound to upper bound with a given
+   step size just like a regular pythonic for loop would
 
+   on calling this object, it will execute the body of the
+   loop that is set using the body argument to init
+
+   allows pretty print of the loop in a pythonic manner
+'''
 class RangeForBlock(object):
 
     def __init__(self, lowerBound, upperBound, step, body):
@@ -31,9 +65,36 @@ class RangeForBlock(object):
             self.body()
         return
 
-    def __repr__(self):
-        return 'for i in range({}, {}, {})'.format(self.lowerBound, self.upperBound, self.step) + '\n' + self.body.__repr__()
+    def __repr__(self, indent=0):
 
+        tabs = ''.join(['\t' for _ in range(indent)])
+
+        return tabs + 'for i in range({}, {}, {}):'.format(self.lowerBound, self.upperBound, self.step) + \
+            '\n' + self.body.__repr__(indent=indent+1)
+
+class WhileBlock(object):
+
+    def __init__(self, cond, body):
+        self.cond = cond
+
+        self.body = body
+        return
+
+    def __call__(self):
+        while self.cond():
+            self.body()
+        return
+
+    def __repr__(self, indent=0):
+
+        tabs = ''.join(['\t' for _ in range(indent)])
+
+        return tabs + 'while {}:'.format(self.cond) + '\n' + self.body.__repr__(indent=indent+1)
+
+'''
+   Maybe for the future an iteration over an iterable in the same
+   vane as the RangeForBlock
+'''
 '''
 class IterForBlock(object):
 
@@ -49,42 +110,147 @@ class IterForBlock(object):
         return 'for i in {}'.format(self.iterable) + '\n' + self.body.__repr__()
 '''
 
+'''
+   Allows the agent to turn left in the environment
+   also allows for pretty print
+'''
+class TurnLeft(MovementBlock):
+
+    def __call__(self):
+
+        self.position.orientation += 1
+        if self.position.orientation == Direction.RIGHT + 1:
+            self.position.orientation = Direction.UP
+
+    def __repr__(self, indent=0):
+        return ''.join(['\t' for _ in range(indent)]) + 'TurnLeft()'
+
+'''
+   Allows the agent to turn right in the environment
+   also allows for pretty print
+'''
+class TurnRight(MovementBlock):
+
+    def __call__(self):
+
+        self.position.orientation -= 1
+        if self.position.orientation == 0:
+            self.position.orientation = Direction.RIGHT
+
+    def __repr__(self, indent=0):
+
+        return ''.join(['\t' for _ in range(indent)]) + 'TurnLeft()'
+
+'''
+   Allows the agent to move forward in the environment
+   irrespective of its orientation
+
+   also allows for pretty print
+'''
 class ForwardBlock(MovementBlock):
 
     def __call__(self):
-        self.position.y += 1
+
+        orientation = self.position.orientation
+        if orientation == Direction.UP:
+            self.position.y += 1
+        elif orientation == Direction.LEFT:
+            self.position.x -= 1
+        elif orientation == Direction.DOWN:
+            self.position.y -= 1
+        else:
+            self.position.x += 1
+
         return
 
-    def __repr__(self):
-        return '\tForward()'
+    def __repr__(self, indent=0):
 
+        return ''.join(['\t' for _ in range(indent)]) + 'Forward()'
+
+'''
+   Allows the agent to move backward in the environment
+   irrespective of its orientation
+
+   also allows for pretty print
+'''
 class BackwardBlock(MovementBlock):
 
     def __call__(self):
-        self.position.y -= 1
+        orientation = self.position.orientation
+        if orientation == Direction.UP:
+            self.position.y -= 1
+        elif orientation == Direction.LEFT:
+            self.position.x += 1
+        elif orientation == Direction.DOWN:
+            self.position.y += 1
+        else:
+            self.position.x -= 1
+
         return
 
-    def __repr__(self):
-        return '\tBackward()'
+    def __repr__(self, indent=0):
 
+        return ''.join(['\t' for _ in range(indent)]) + 'Backward()'
+
+'''
+   Allows the agent to move left in the environment
+   irrespective of its orientation
+
+   also allows for pretty print
+'''
 class LeftBlock(MovementBlock):
 
     def __call__(self):
-        self.position.x -= 1
+        orientation = self.position.orientation
+        if orientation == Direction.UP:
+            self.position.x -= 1
+        elif orientation == Direction.LEFT:
+            self.position.y -= 1
+        elif orientation == Direction.DOWN:
+            self.position.x += 1
+        else:
+            self.position.y += 1
+
         return
 
-    def __repr__(self):
-        return '\tLeft()'
+    def __repr__(self, indent=0):
 
+        return ''.join(['\t' for _ in range(indent)]) + 'Left()'
+
+'''
+   Allows the agent to move right in the environment
+   irrespective of its orientation
+
+   also allows for pretty print
+'''
 class RightBlock(MovementBlock):
 
     def __call__(self):
-        self.position.x += 1
+        orientation = self.position.orientation
+        if orientation == Direction.UP:
+            self.position.x += 1
+        elif orientation == Direction.LEFT:
+            self.position.y += 1
+        elif orientation == Direction.DOWN:
+            self.position.x -= 1
+        else:
+            self.position.y -= 1
+
         return
 
-    def __repr__(self):
-        return '\tRight()'
+    def __repr__(self, indent=0):
 
+        return ''.join(['\t' for _ in range(indent)]) + 'Right()'
+
+'''
+   Allows the stacking of blocks together
+   useful for building the body of a loop
+
+   on a call to this will execute all the
+   blocks that are stacked
+
+   nice pretty print as well
+'''
 class StackedBlock(object):
 
     def __init__(self, blocks=[]):
@@ -100,10 +266,10 @@ class StackedBlock(object):
             block()
         return
 
-    def __repr__(self):
+    def __repr__(self, indent=0):
         ret = ""
         for block in self.blocks:
-            ret = ret + block.__repr__() + '\n'
+            ret = ret + block.__repr__(indent=indent) + '\n'
         return ret
 
 
@@ -112,13 +278,16 @@ if __name__ == '__main__':
     s_block = StackedBlock()
 
 
-    for _ in range(10):
+    for _ in range(7):
         s_block.stack(ForwardBlock())
+        s_block.stack(TurnLeft())
         #s_block.stack(BackwardBlock())
 
-    for_block = RangeForBlock(0, 10, 2, s_block)
+    for_block = RangeForBlock(0, 1, 1, s_block)
 
-    print(for_block)
+    for_block_2 = RangeForBlock(0, 1, 1, for_block)
+
+    print(for_block_2)
 
     for_block()
     print(location)
