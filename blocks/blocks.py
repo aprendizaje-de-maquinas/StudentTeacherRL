@@ -16,7 +16,7 @@ any else?
 
 '''
    Simple class to hold an enum of the direction
-   we arecurrently facing
+   we are currently facing
 '''
 class Direction(object):
     UP    = 1
@@ -24,8 +24,8 @@ class Direction(object):
     DOWN  = 3
     RIGHT = 4
 
-    def __init__(self):
-        self.v = Direction.UP
+    def __init__(self, init = 1): # default is Direction.UP
+        self.v = init
         return
 
     def next(self):
@@ -56,11 +56,19 @@ class Direction(object):
 '''
 class Position(object):
 
-    def __init__(self, x=0, y=0):
+    def __init__(self, x=0, y=0, orientation=None, xborder = 8, yborder = 8):
         self.x = x
         self.y = y
+        self.xborder = xborder
+        self.yborder = yborder
 
-        self.orientation = Direction()
+        if orientation:
+            self.orientation = orientation
+        else:
+            self.orientation = Direction()
+        
+    def out_of_bounds(self):
+        return self.x < 0 or self.y < 0 or self.x >= self.xborder or self.y >= self.yborder
 
     def __repr__(self):
         return '({} , {}) In Direction: {}'.format(self.x, self.y, self.orientation)
@@ -260,17 +268,17 @@ class TurnRight(MovementBlock):
 '''
 class ForwardBlock(MovementBlock):
 
-    def __call__(self):
+    def __call__(self, agent):
 
-        orientation = self.position.orientation.v
+        orientation = agent.position.orientation
         if orientation == Direction.UP:
-            self.position.y += 1
+            agent.position.x -= 1
         elif orientation == Direction.LEFT:
-            self.position.x -= 1
+            agent.position.y -= 1
         elif orientation == Direction.DOWN:
-            self.position.y -= 1
+            agent.position.x += 1
         else:
-            self.position.x += 1
+            agent.position.y += 1
 
         return
 
