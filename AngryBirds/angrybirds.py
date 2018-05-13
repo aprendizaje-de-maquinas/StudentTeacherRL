@@ -3,6 +3,7 @@ from ple.games import base
 from blocks.blocks import *
 from pygame.constants import *
 import os, sys
+import gym
 
 class BirdPlayer(pygame.sprite.Sprite):
 
@@ -128,11 +129,12 @@ class AngryBird(base.PyGameWrapper):
     """
 
     def __init__(self, width=256, height=256):
-
+        
         actions = {
             "add_f_block": K_f,
             "run": K_r
         }
+        self.actions = actions
 
         fps = 30
         self.lives = -1
@@ -209,6 +211,9 @@ class AngryBird(base.PyGameWrapper):
         self.score = 0.0
         self.game_tick = 0
 
+    def getActionSpace(self):
+        return self.actions
+    
     def getGameState(self):
         """
         Gets a non-visual state representation of the game.
@@ -272,4 +277,63 @@ class AngryBird(base.PyGameWrapper):
 
         if self.player.position.x == self.pig_pos.x and self.player.position.y == self.pig_pos.y:
             self.reward += 1
-            self.player.finished = True        
+            self.player.finished = True
+
+from gym import spaces
+from ple import PLE
+import numpy as np
+
+class AngryBirdEnv(gym.Env):
+
+    
+    def __init__(self, display_screen=True):
+
+        self.game_state = PLE(AngryBird(), fps=30, display_screen=True)
+        self.game_state.init()
+
+        self._action_set = self.game_state.getActionSet()
+        self.action_space = spaces.Discrete(len(self._action_set))
+        self.screen_height, self.screen_width = self.game_state.getScreenDims()
+
+        self.observation_space = spaces.Box(low=0, high=255, shape=(self.screen_width, self.screen_height, 3), dtype=np.uint8)
+        self.viewer = None
+
+    def step(self, a):
+
+        reward = self.game_state.act(list(self._action_set)[a])
+        state = self._get_image()
+        terminal = self.game_state.game_over()
+        return state, reward, terminal, {}
+
+    def _get_image(self):
+        image_rotated = np.fliplr(np.rot90(self.game_state.getScreenRGB(),3))
+        return image_rotated
+
+    @property
+    def _n_actions(self):
+        return len(self._action_set)
+
+    def reset(self):
+        self.observation_space = spaces.Box(low=0, high=255, shape=(self.screen_width, self.screen_height, 3), dtype=np.uint8)
+        self.game_state.reset_game()
+        state = self._get_image()
+        return state
+
+    def render(self, mode='human', close=False):
+        print('in render')
+        if close:
+            if self.viewer is not None:
+                self.viewer.close()
+                self.viewer = None
+                return
+        img = self._get_image()
+        if mode == 'rgb_array':
+            return img
+        elif mode == 'human':
+            from gym.envs.classic_control import rendering
+            if self.viewer is None:
+                self.viewer = rendering.SimpleImageViewer()
+            self.viewer.imshow(img)
+
+    def _seed(self, _):
+        self.game_state.init()
