@@ -4,18 +4,22 @@ from blocks.blocks import *
 from pygame.constants import *
 import os, sys
 import gym
+from gym import spaces
+from ple import PLE
+import numpy as np
+import time
 
 class BirdPlayer(pygame.sprite.Sprite):
 
     # The bird only needs to know its current plan and position
     def __init__(self,
-                 SCREEN_WIDTH, SCREEN_HEIGHT, init_pos, image):
-        
+                 SCREEN_WIDTH, SCREEN_HEIGHT, init_pos, image, render=True):
         self.SCREEN_WIDTH = SCREEN_WIDTH
         self.SCREEN_HEIGHT = SCREEN_HEIGHT
 
         self.plan = []
-
+        self.render = render
+        
         pygame.sprite.Sprite.__init__(self)
 
         self.image = image
@@ -40,12 +44,12 @@ class BirdPlayer(pygame.sprite.Sprite):
     def update(self, dt):
         self.game_tick += 1
         if self.executingProgram:
-            block = self.plan[0]
-            block(self)
-            self.plan = self.plan[1:]
-            if not len(self.plan) or self.position.out_of_bounds(): # out of bounds
+
+            self.plan.pop(0)(self)
+
+            if len(self.plan) == 0 or self.position.out_of_bounds():
                 self.executingProgram = False
-                self.finished = True          
+                self.plan = []
 
     def draw(self, screen):
         screen.blit(pygame.transform.rotate(self.image, 90 * (self.orientation - 3)), \
@@ -113,22 +117,8 @@ class Backdrop():
 
 
 class AngryBird(base.PyGameWrapper):
-    """
-    Used physics values from sourabhv's `clone`_.
 
-    .. _clone: https://github.com/sourabhv/FlapPyBird
-
-
-    Parameters
-    ----------
-    width : int (default: 512)
-        Screen width. Consistent gameplay is not promised for different widths or heights, therefore the width and height should not be altered.
-
-    height : inti (default: 512)
-        Screen height.
-    """
-
-    def __init__(self, width=256, height=256):
+    def __init__(self, width=256, height=256, render=True):
         
         actions = {
             "add_f_block": K_f,
@@ -161,6 +151,9 @@ class AngryBird(base.PyGameWrapper):
         self._load_images()
         self.level = 0
         self.reward = 0
+        self.render = render
+
+        self.init()
 
     def _load_map(self):
         sample_map_path = os.path.join(self._maps_dir, "sample_map.txt")
@@ -174,24 +167,31 @@ class AngryBird(base.PyGameWrapper):
                     self.pig_pos = Position(i, j, Direction.DOWN)
                 elif self.curmap[i][j] == "B":
                     self.init_player_pos = [i, j]
-        
+ 
         f.close()
 
     def _load_images(self):
         # preload and convert all the images so its faster when we reset
         bird_path = os.path.join(self._asset_dir, "bird.png")
         self.images["player"] = pygame.image.load(bird_path).convert_alpha()
-        
+
         bg_path = os.path.join(self._asset_dir, "bg.png")
         self.images["background"] = pygame.image.load(bg_path).convert_alpha()
-        
+
         wood_path = os.path.join(self._asset_dir, "wood.png")
         self.images["wood"] = pygame.image.load(wood_path).convert_alpha()
 
         pig_path = os.path.join(self._asset_dir, "pig.png")
         self.images["pig"] = pygame.image.load(pig_path).convert_alpha()
 
+    def reset(self):
+        self.backdrop = None
+        self.player = None
+
+        self.init()
+
     def init(self):
+
         if self.backdrop is None:
             self.backdrop = Backdrop(
                 self.width,
@@ -201,11 +201,12 @@ class AngryBird(base.PyGameWrapper):
             )
 
         if self.player is None:
+            print ('after')
             self.player = BirdPlayer(
                 self.width,
                 self.height,
                 self.init_player_pos,
-                self.images["player"],
+                self.images["player"], render=self.render
             )
 
         self.score = 0.0
@@ -215,26 +216,6 @@ class AngryBird(base.PyGameWrapper):
         return self.actions
     
     def getGameState(self):
-        """
-        Gets a non-visual state representation of the game.
-
-        Returns
-        -------
-
-        dict
-            * player y position.
-            * players velocity.
-            * next pipe distance to player
-            * next pipe top y position
-            * next pipe bottom y position
-            * next next pipe distance to player
-            * next next pipe top y position
-            * next next pipe bottom y position
-
-
-            See code for structure.
-
-        """
 
         state = {
             "player_y": self.player.pos_x,
@@ -254,42 +235,48 @@ class AngryBird(base.PyGameWrapper):
 
             if event.type == pygame.KEYDOWN:
                 key = event.key
+                print(self.player.plan)
                 if key == self.actions['add_f_block']:
                     self.player.addBlock(ForwardBlock())
+                    self.executing = False
+                    return False
                 elif key == self.actions['run']:
                     self.player.executeProgram()
+                    self.executing = (not len(self.player.plan)==0)
+                    return True
+
+        self.executing = False
+        return False
 
     def game_over(self):
         return self.player.finished
 
     def step(self, dt):
-        self.game_tick += 1
-        dt = dt / 1000.0
 
-        # handle player movement
-        self._handle_player_events()
-        
-        self.player.update(dt)
 
-        self.backdrop.draw_background(self.screen)
-        self.backdrop.update_draw_base(self.screen, dt)
-        self.player.draw(self.screen)
+        self.executing = True
+        while self.executing == True:
+            self.game_tick += 1
+            dt = dt / 1000.0
+            self._handle_player_events()
+            self.player.update(dt)
+            
+            self.backdrop.draw_background(self.screen)
+            self.backdrop.update_draw_base(self.screen, dt)
+            self.player.draw(self.screen)
+            
+            if self.player.position.x == self.pig_pos.x and self.player.position.y == self.pig_pos.y:
+                self.reward += 1
+                self.player.finished = True
 
-        if self.player.position.x == self.pig_pos.x and self.player.position.y == self.pig_pos.y:
-            self.reward += 1
-            self.player.finished = True
-
-from gym import spaces
-from ple import PLE
-import numpy as np
 
 class AngryBirdEnv(gym.Env):
 
     
     def __init__(self, display_screen=True):
 
-        self.game_state = PLE(AngryBird(), fps=30, display_screen=True)
-        self.game_state.init()
+        self.game_state = PLE(AngryBird(render=display_screen), fps=30, display_screen=False)
+        #self.game_state.init()
 
         self._action_set = self.game_state.getActionSet()
         self.action_space = spaces.Discrete(len(self._action_set))
@@ -314,13 +301,16 @@ class AngryBirdEnv(gym.Env):
         return len(self._action_set)
 
     def reset(self):
+
         self.observation_space = spaces.Box(low=0, high=255, shape=(self.screen_width, self.screen_height, 3), dtype=np.uint8)
-        self.game_state.reset_game()
+
+        self.game_state.game.reset()
+
         state = self._get_image()
+        self.render()
         return state
 
     def render(self, mode='human', close=False):
-        print('in render')
         if close:
             if self.viewer is not None:
                 self.viewer.close()
@@ -334,6 +324,8 @@ class AngryBirdEnv(gym.Env):
             if self.viewer is None:
                 self.viewer = rendering.SimpleImageViewer()
             self.viewer.imshow(img)
+
+        #time.sleep(1)
 
     def _seed(self, _):
         self.game_state.init()
