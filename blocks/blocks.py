@@ -68,6 +68,7 @@ class Position(object):
             self.orientation = Direction()
         
     def out_of_bounds(self):
+        print('I AM HERE BITCHES')
         return self.x < 0 or self.y < 0 or self.x >= self.xborder or self.y >= self.yborder
 
     def __repr__(self):
@@ -241,8 +242,8 @@ class IterForBlock(object):
 '''
 class TurnLeft(MovementBlock):
 
-    def __call__(self):
-        Direction.next(self.position.orientation)
+    def __call__(self, agent):
+        agent.position.orientation.next() # = Direction.next(self.position.orientation)
 
     def __repr__(self, indent=0):
         return ''.join(['\t' for _ in range(indent)]) + 'TurnLeft()'
@@ -253,8 +254,8 @@ class TurnLeft(MovementBlock):
 '''
 class TurnRight(MovementBlock):
 
-    def __call__(self):
-        Direction.prev(self.position.orientation)
+    def __call__(self, agent):
+        agent.position.orientation.prev() # = Direction.prev(self.position.orientation)
 
     def __repr__(self, indent=0):
 
