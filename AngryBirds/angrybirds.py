@@ -1,8 +1,13 @@
+'''
+Angry birds type game for rl program creation
+'''
+
 import pygame
 from ple.games import base
-from blocks.blocks import *
-from pygame.constants import *
-import os, sys
+from blocks.blocks import Position, Direction, ForwardBlock
+from pygame.constants import K_r, K_f, KEYDOWN, NOFRAME, QUIT
+import os
+import sys
 import gym
 from gym import spaces
 from ple import PLE
@@ -12,14 +17,13 @@ import time
 class BirdPlayer(pygame.sprite.Sprite):
 
     # The bird only needs to know its current plan and position
-    def __init__(self,
-                 SCREEN_WIDTH, SCREEN_HEIGHT, init_pos, image, render=True):
+    def __init__(self, SCREEN_WIDTH, SCREEN_HEIGHT, init_pos, image, render=True):
         self.SCREEN_WIDTH = SCREEN_WIDTH
         self.SCREEN_HEIGHT = SCREEN_HEIGHT
 
         self.plan = []
         self.render = render
-        
+
         pygame.sprite.Sprite.__init__(self)
 
         self.image = image
@@ -41,7 +45,7 @@ class BirdPlayer(pygame.sprite.Sprite):
         if not self.finished:
             self.executingProgram = True
 
-    def update(self, dt):
+    def update(self, _):
         self.game_tick += 1
         if self.executingProgram:
 
@@ -57,19 +61,18 @@ class BirdPlayer(pygame.sprite.Sprite):
 
 class Block(pygame.sprite.Sprite):
 
-    def __init__(self,
-                 SCREEN_WIDTH, SCREEN_HEIGHT, init_pos, image):
+    def __init__(self, SCREEN_WIDTH, SCREEN_HEIGHT, init_pos, image):
 
         self.SCREEN_WIDTH = SCREEN_WIDTH
         self.SCREEN_HEIGHT = SCREEN_HEIGHT
 
-        self.width = self.image.get_width()
         pygame.sprite.Sprite.__init__(self)
 
         self.pos_x = init_pos[0]
         self.pos_y = init_pos[1]
 
         self.image = image
+        self.width = self.image.get_width()
 
     def update(self, dt):
         pass
@@ -107,7 +110,7 @@ class Backdrop():
     def draw_background(self, screen):
         screen.blit(self.background_image, (0, 0))
     
-    def update_draw_base(self, screen, dt):
+    def update_draw_base(self, screen, _):
         for i in range(len(self.map)):
             for j in range(len(self.map[i])):
                 if self.map[i][j] == "W":
@@ -138,7 +141,7 @@ class AngryBird(base.PyGameWrapper):
         self.images = {}
 
         # so we can preload images
-        pygame.display.set_mode((1, 1), pygame.NOFRAME)
+        pygame.display.set_mode((1, 1), NOFRAME)
 
         self.backdrop = None
         self.player = None
@@ -229,45 +232,46 @@ class AngryBird(base.PyGameWrapper):
 
     def _handle_player_events(self):
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == QUIT:
                 pygame.quit()
                 sys.exit()
 
-            if event.type == pygame.KEYDOWN:
+            if event.type == KEYDOWN:
                 key = event.key
                 print(self.player.plan)
                 if key == self.actions['add_f_block']:
                     self.player.addBlock(ForwardBlock())
-                    self.executing = False
                     return False
                 elif key == self.actions['run']:
                     self.player.executeProgram()
-                    self.executing = (not len(self.player.plan)==0)
+
+                    if self.render:
+                        time.sleep(1)
+                        
                     return True
 
-        self.executing = False
         return False
 
     def game_over(self):
         return self.player.finished
 
+    
     def step(self, dt):
 
-
         self.executing = True
-        while self.executing == True:
-            self.game_tick += 1
-            dt = dt / 1000.0
-            self._handle_player_events()
-            self.player.update(dt)
-            
-            self.backdrop.draw_background(self.screen)
-            self.backdrop.update_draw_base(self.screen, dt)
-            self.player.draw(self.screen)
-            
-            if self.player.position.x == self.pig_pos.x and self.player.position.y == self.pig_pos.y:
-                self.reward += 1
-                self.player.finished = True
+
+        self.game_tick += 1
+        dt = dt / 1000.0
+        self.executing = self._handle_player_events()
+        self.player.update(dt)
+        
+        self.backdrop.draw_background(self.screen)
+        self.backdrop.update_draw_base(self.screen, dt)
+        self.player.draw(self.screen)
+        
+        if self.player.position.x == self.pig_pos.x and self.player.position.y == self.pig_pos.y:
+            self.reward += 1
+            self.player.finished = True
 
 
 class AngryBirdEnv(gym.Env):
@@ -278,11 +282,13 @@ class AngryBirdEnv(gym.Env):
         self.game_state = PLE(AngryBird(render=display_screen), fps=30, display_screen=False)
         #self.game_state.init()
 
+        self.display_screen = display_screen
         self._action_set = self.game_state.getActionSet()
         self.action_space = spaces.Discrete(len(self._action_set))
         self.screen_height, self.screen_width = self.game_state.getScreenDims()
 
-        self.observation_space = spaces.Box(low=0, high=255, shape=(self.screen_width, self.screen_height, 3), dtype=np.uint8)
+        self.observation_space = spaces.Box(low=0, high=255, \
+                                            shape=(self.screen_width, self.screen_height, 3), dtype=np.uint8)
         self.viewer = None
 
     def step(self, a):
@@ -301,8 +307,13 @@ class AngryBirdEnv(gym.Env):
         return len(self._action_set)
 
     def reset(self):
-
-        self.observation_space = spaces.Box(low=0, high=255, shape=(self.screen_width, self.screen_height, 3), dtype=np.uint8)
+        '''
+        Performs ther eset of the gym env
+        '''
+        if self.display_screen:
+            time.sleep(1)
+        self.observation_space = spaces.Box(low=0, high=255, \
+                                            shape=(self.screen_width, self.screen_height, 3), dtype=np.uint8)
 
         self.game_state.game.reset()
 
@@ -311,6 +322,9 @@ class AngryBirdEnv(gym.Env):
         return state
 
     def render(self, mode='human', close=False):
+        '''
+        Performs the rendering for the gym env
+        '''
         if close:
             if self.viewer is not None:
                 self.viewer.close()
@@ -324,8 +338,6 @@ class AngryBirdEnv(gym.Env):
             if self.viewer is None:
                 self.viewer = rendering.SimpleImageViewer()
             self.viewer.imshow(img)
-
-        #time.sleep(1)
 
     def _seed(self, _):
         self.game_state.init()
