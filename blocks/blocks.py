@@ -68,7 +68,6 @@ class Position(object):
             self.orientation = Direction()
         
     def out_of_bounds(self):
-        print('I AM HERE BITCHES')
         return self.x < 0 or self.y < 0 or self.x >= self.xborder or self.y >= self.yborder
 
     def __repr__(self):
