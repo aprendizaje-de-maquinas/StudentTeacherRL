@@ -6,7 +6,9 @@ import torch.nn.functional as F
 import torch.multiprocessing as mp
 import gym
 import os
+import collections
 
+mp.set_start_method('spawn')
 os.environ["OMP_NUM_THREADS"] = "1"
 
 
@@ -45,14 +47,15 @@ class Worker(mp.Process):
     def wrap(self, arr, dtype=np.float32):
         if arr.dtype != dtype:
             arr = arr.astype(dtype)
-        return Variable(torch.from_numpy(arr))
+        return Variable(torch.from_numpy(arr)).cuda()
 
 
     def update_gradients(self, done, states_, states, actions, rewards):
         if done:
             value = 0
         else:
-            value = self.local_net.forward(self.wrap(states_[None, :]))[-1].data.numpy()[0, 0]
+            _states_ = np.expand_dims(states_, axis=0)
+            value = self.local_net.forward(self.wrap(_states_))[-1].data.numpy()[0, 0]
 
         targets = []
         for r in rewards[::-1]:
@@ -96,10 +99,24 @@ class Worker(mp.Process):
             state_buf, action_buf, reward_buf = [], [], []
             episode_reward = 0.
             while True:
+
+                print('step')
+
                 if self.name == 'w0':
                     self.env.render()
-                action = self.local_net.choose_action(self.wrap(state[None, :]))
-                state_, reward, done, _ = self.env.step(action)
+
+                _state_ = np.expand_dims(state, axis=0)
+                _state_ = np.moveaxis(_state_, -1, 1)
+                print(_state_.shape)
+                action = self.local_net.choose_action(self.wrap(_state_))
+
+                if not isinstance(action, collections.Iterable):
+                    _action = [action]
+                else:
+                    _action = action
+
+                for a in _action:
+                    state_, reward, done, _ = self.env.step(a)
 
                 episode_reward += reward
                 action_buf.append(action)
@@ -124,8 +141,11 @@ class A3C(object):
     def __init__(self, env_name, network, n_episodes, episodes_per_update, gamma, learning_rate):
 
         env = gym.make(env_name)
-        N_S = env.observation_space.shape[0]
+        N_S = np.squeeze(env.observation_space.shape)
         N_A = env.action_space.n
+
+        print('State Space:\t', N_S)
+        print('Action Space:\t', N_A)
 
         global_net = network(N_S, N_A)
 
@@ -136,7 +156,7 @@ class A3C(object):
         self.workers = [Worker(network, global_net, N_S, N_A, opt, gamma, global_episode, global_episode_reward, \
                                self.reward_queue, i, n_episodes, episodes_per_update, \
                                env_name)
-                        for i in range(mp.cpu_count())]
+                        for i in range(1)] #range(mp.cpu_count())]
 
     def train(self):
         [w.start() for w in self.workers]

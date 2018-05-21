@@ -1,10 +1,12 @@
-from ple import PLE
 import gym
-from pygame import K_f, K_r
-import AngryBirds
 import pygame
+import AngryBirds
 
-p = gym.make('AngryBirds-v0')
+
+p = gym.make('AngryBirds-v0').unwrapped #v0 has display with render
+#p = gym.make('AngryBirds-v1')  #v1 has no display with render
+
+
 
 p.reset()
 p.render()
@@ -22,19 +24,20 @@ actions = {
 }
 
 
-for f in range(len(script)):
-    
-    # state and reward will be none for all actions but run
-    # reward will be 1 if task success
-    state, reward, _, _ = p.step(actions[script[f]])
-    if state is not None:
-        #print(state)
-        print(reward)
-    p.render()
+for _ in range(2):
+    for f in range(len(script)):
+        
+        # state and reward will be none for all actions but run
+        # reward will be 1 if task success
+        state, reward, _, _ = p.step(actions[script[f]])
+        if state is not None:
+            print(reward)
+        p.render()
 
 
-p.reset()
+    p.reset_hard()
+
+p.close()
 pygame.display.quit()
-pygame.quit()
 
 

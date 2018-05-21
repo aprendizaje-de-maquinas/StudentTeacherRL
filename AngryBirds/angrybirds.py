@@ -16,6 +16,9 @@ import time
 
 from AngryBirds.bird_envs import SimpleEnv
 
+
+os.environ["SDL_VIDEODRIVER"] = "dummy"
+
 class BirdPlayer(pygame.sprite.Sprite):
 
     # The bird only needs to know its current plan and position
@@ -55,10 +58,10 @@ class BirdPlayer(pygame.sprite.Sprite):
 
             if len(self.plan) == 0:
                 return
-            
+
             self.plan.pop(0)(self)
-            
-            if self.world[self.position.x][self.position.y] == 'W':
+
+            if self.position.out_of_bounds() or self.world[self.position.x][self.position.y] == 'W':
                 self.died = True
             if len(self.plan) == 0: #self.position.out_of_bounds():
                 self.executingProgram = False
@@ -69,9 +72,13 @@ class BirdPlayer(pygame.sprite.Sprite):
 
 
     def draw(self, screen):
-        screen.blit(pygame.transform.rotate(self.image, 90 * (self.position.orientation.v - 3)), \
-                    (self.SCREEN_WIDTH / 8 * self.position.y, self.SCREEN_HEIGHT / 8 * self.position.x))
+        try:
+            screen.blit(pygame.transform.rotate(self.image, 90 * (self.position.orientation.v - 3)), \
+                        (self.SCREEN_WIDTH / 8 * self.position.y, self.SCREEN_HEIGHT / 8 * self.position.x))
+        except:
+            pass
 
+        
 class Block(pygame.sprite.Sprite):
 
     def __init__(self, SCREEN_WIDTH, SCREEN_HEIGHT, init_pos, image):
@@ -92,8 +99,7 @@ class Block(pygame.sprite.Sprite):
 
 class Pig(pygame.sprite.Sprite):
 
-    def __init__(self,
-                 SCREEN_WIDTH, SCREEN_HEIGHT, init_pos, image):
+    def __init__(self, SCREEN_WIDTH, SCREEN_HEIGHT, init_pos, image):
 
         self.SCREEN_WIDTH = SCREEN_WIDTH
         self.SCREEN_HEIGHT = SCREEN_HEIGHT
@@ -109,28 +115,36 @@ class Pig(pygame.sprite.Sprite):
         pass
 
 class Backdrop():
-    def __init__(self, SCREEN_WIDTH, SCREEN_HEIGHT,
-                 image_assets, map):
+    def __init__(self, SCREEN_WIDTH, SCREEN_HEIGHT, image_assets, map):
         self.SCREEN_WIDTH = SCREEN_WIDTH
         self.SCREEN_HEIGHT = SCREEN_HEIGHT
 
-        self.background_image = image_assets["background"]
-        self.wood_image = image_assets["wood"]
-        self.pig_image = image_assets["pig"]
+        try:
+            self.background_image = image_assets["background"]
+            self.wood_image = image_assets["wood"]
+            self.pig_image = image_assets["pig"]
+        except:
+            pass
+        
         self.map = map
 
 
     def draw_background(self, screen):
-        screen.blit(self.background_image, (0, 0))
-    
+        try:
+            screen.blit(self.background_image, (0, 0))
+        except:
+            pass
+        
     def update_draw_base(self, screen, _):
-        for i in range(len(self.map)):
-            for j in range(len(self.map[i])):
-                if self.map[i][j] == "W":
-                    screen.blit(self.wood_image, (self.SCREEN_WIDTH / 8 * j, self.SCREEN_HEIGHT / 8 * i))
-                elif self.map[i][j] == "P":
-                    screen.blit(self.pig_image, (self.SCREEN_WIDTH / 8 * j, self.SCREEN_HEIGHT / 8 * i))
-
+        try:
+            for i in range(len(self.map)):
+                for j in range(len(self.map[i])):
+                    if self.map[i][j] == "W":
+                        screen.blit(self.wood_image, (self.SCREEN_WIDTH / 8 * j, self.SCREEN_HEIGHT / 8 * i))
+                    elif self.map[i][j] == "P":
+                        screen.blit(self.pig_image, (self.SCREEN_WIDTH / 8 * j, self.SCREEN_HEIGHT / 8 * i))
+        except:
+            pass
 
 class AngryBird(base.PyGameWrapper):
 
@@ -157,7 +171,8 @@ class AngryBird(base.PyGameWrapper):
         self.images = {}
 
         # so we can preload images
-        pygame.display.set_mode((1, 1), NOFRAME)
+        if render:
+            pygame.display.set_mode((1, 1), NOFRAME)
 
         self.backdrop = None
         self.player = None
@@ -166,8 +181,15 @@ class AngryBird(base.PyGameWrapper):
         self._dir_ = os.path.dirname(os.path.abspath(__file__))
         self._asset_dir = os.path.join(self._dir_, "assets")
         self._maps_dir = os.path.join(self._dir_, "maps")
+
+
         self._load_map()
-        self._load_images()
+
+        if render:
+            self._load_images()
+        else:
+            self.images['player'] = None
+            
         self.level = 0
         self.reward = 0
         self.render = render
@@ -176,13 +198,14 @@ class AngryBird(base.PyGameWrapper):
 
     def _load_map(self):
 
-        #sample_map_path = os.path.join(self._maps_dir, "sample_map.txt")
-        #f = open(sample_map_path,"r")
-        env = str(SimpleEnv(self.num_blocks))
-        print(env)
-        self.curmap = [ x.strip().split(', ') for x in env.split('\n')]
-        print(self.curmap)
-        #self.curmap = [ x.strip().split(", ") for x in f.readlines()]
+        # use this for deterministic maps
+        sample_map_path = os.path.join(self._maps_dir, "sample_map.txt")
+        f = open(sample_map_path,"r")
+        self.curmap = [ x.strip().split(", ") for x in f.readlines()]
+
+        # use this for non deterministic mas
+        #env = str(SimpleEnv(self.num_blocks))
+        #self.curmap = [ x.strip().split(', ') for x in env.split('\n')]
         
         # find player and pig positions
         for i in range(len(self.curmap)):
@@ -192,7 +215,7 @@ class AngryBird(base.PyGameWrapper):
                 elif self.curmap[i][j] == "B":
                     self.init_player_pos = [i, j]
  
-        #f.close()
+        f.close()
 
     def _load_images(self):
         # preload and convert all the images so its faster when we reset
@@ -286,7 +309,8 @@ class AngryBird(base.PyGameWrapper):
         self.backdrop.draw_background(self.screen)
         self.backdrop.update_draw_base(self.screen, dt)
         self.player.draw(self.screen)
-        
+
+
 
 class AngryBirdEnv(gym.Env):
 
@@ -305,6 +329,7 @@ class AngryBirdEnv(gym.Env):
         self.observation_space = spaces.Box(low=0, high=255, \
                                             shape=(self.screen_width, self.screen_height, 3), dtype=np.uint8)
         self.viewer = None
+
 
     def step(self, a):
         
@@ -325,16 +350,21 @@ class AngryBirdEnv(gym.Env):
         if self.display_screen:
             self.render()
 
+        reward = self.game_state.game.getScore() and not self.game_state.game.player.died
+
         terminal = (self.game_state.game_over() or self.game_state.game.player.died)
 
-        if self._action_set[a] != K_r:
-            states = None
-            reward = None
+        if self._action_set[a] != K_r or len(states) == 0:
+            states = self._get_image()
+            reward = 0
             #states.append(self._get_image())
             pass
         else:
+            states = states[0] #temporary
             self.reset()
 
+        assert reward in [0, 1], 'Reward is not what it should be:  ' + str(reward)
+        
         return states, reward, terminal, {}
 
     def _get_image(self):
@@ -357,29 +387,44 @@ class AngryBirdEnv(gym.Env):
         self.game_state.game.reset()
 
         state = self._get_image()
-        self.render()
+        if self.display_screen:
+            self.render()
         return state
-
-    def dummy(self):
-        print ('called')
 
     def render(self, mode='human', close=False):
         '''
         Performs the rendering for the gym env
         '''
-        if close:
-            if self.viewer is not None:
-                self.viewer.close()
-                self.viewer = None
-                return
-        img = self._get_image()
-        if mode == 'rgb_array':
-            return img
-        elif mode == 'human':
-            from gym.envs.classic_control import rendering
-            if self.viewer is None:
-                self.viewer = rendering.SimpleImageViewer()
-            self.viewer.imshow(img)
+        if self.display_screen:
+            if close:
+                if self.viewer is not None:
+                    self.viewer.close()
+                    self.viewer = None
+                    return
+            img = self._get_image()
+            if mode == 'rgb_array':
+                return img
+            elif mode == 'human':
+                from gym.envs.classic_control import rendering
+                if self.viewer is None:
+                    self.viewer = rendering.SimpleImageViewer()
+                self.viewer.imshow(img)
 
     def _seed(self, _):
         self.game_state.init()
+
+    def reset_hard(self):
+        self.close()
+        self.viewer.close()
+        self.viewer = None
+
+        self.__init__()
+
+class AngryBirdEnvNoDisp(AngryBirdEnv):
+
+    def __init__(self):
+        super(AngryBirdEnvNoDisp, self).__init__(display_screen=False)
+    def render(self, mode='human', close=False):
+        pass
+
+    

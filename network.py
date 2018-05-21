@@ -1,8 +1,49 @@
 from torch import nn
 import torch
 import torch.nn.functional as F
+from torchvision.models import resnet
 
+class Net(resnet.ResNet):
 
+    def __init__(self, sate_dim, action_dim):
+
+        super(Net, self).__init__(resnet.BasicBlock, [2,2,2,2], num_classes=action_dim)
+        self.cuda()
+        self.distribution = torch.distributions.Categorical
+
+        self.apply(self.init)
+
+    def init(self, m):
+
+        try:
+            nn.init.normal(m.weight, mean=0.0, std=0.1)
+            nn.init.constant(m.bias, 0.1)
+        except:
+            pass
+            #print(type(m))
+
+    def choose_action(self, state):
+        self.eval()
+        logits, _ = self.forward(state)
+        probs = F.softmax(logits, dim=1).data
+
+        print('act')
+        return self.distribution(probs).sample ().numpy()[0]
+
+    def loss_func(self, state, action, value):
+        self.train()
+        logits, values = self.forward(state)
+        td = value - values
+        value_loss = td.pow(2)
+
+        probs = F.softmax(logits, dim=1)
+
+        action_loss = -self.distribution(probs).log_prob(action) * td.detach()
+
+        total_loss = (value_loss + action_loss).mean()
+        return total_loss
+
+'''
 class Net(nn.Module):
 
     def __init__(self, state_dim, action_dim):
@@ -47,3 +88,4 @@ class Net(nn.Module):
 
         total_loss = (value_loss + action_loss).mean()
         return total_loss
+'''
