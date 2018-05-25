@@ -156,6 +156,37 @@ class IfBlock(object):
     def __repr__(self, indent=0):    
         return ''.join(['\t' for _ in range(indent)]) + 'if ' + self.cond + ':\n' + \
             self._if.__repr__(indent + 1)
+
+
+'''
+   Simple if class
+'''
+
+
+class ConditionBlock(object):
+
+    def __call__(self, agent):
+        return self._condition(agent)
+
+    def _condition(self, agent):
+        return True
+
+
+class ClearAhead(ConditionBlock):
+
+    def _condition(self, agent):
+        pos = agent.position
+        nextx, nexty = pos.x, pos.y
+        if pos.orientation == Direction.UP:
+            nextx -= 1
+        elif pos.orientation == Direction.LEFT:
+            nexty -= 1
+        elif pos.orientation == Direction.DOWN:
+            nextx += 1
+        else:
+            nexty += 1
+        newPosition = Position(nextx, nexty, pos.orientation, pos.xborder, pos.yborder)
+        return (not newPosition.out_of_bounds()) and agent.world[nextx][nexty] == 'E'
             
 '''
    Implements a for loop over a range
@@ -193,7 +224,7 @@ class RangeForBlock(object):
 
 class WhileBlock(object):
 
-    def __init__(self, cond, body=None):
+    def __init__(self, body=None):
         self.cond = cond
 
         if body is None: self.body = NullBlock()
@@ -213,7 +244,10 @@ class WhileBlock(object):
         return tabs + 'while {}:'.format(self.cond) + '\n' + self.body.__repr__(indent=indent+1)
 
 
-    
+class EndBlock(NullBlock):
+    def __repr__(self, indent=0):
+        return ''.join(['\t' for _ in range(indent)]) + 'end block'
+
 '''
    Maybe for the future an iteration over an iterable in the same
    vane as the RangeForBlock

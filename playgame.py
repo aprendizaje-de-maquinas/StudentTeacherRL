@@ -29,6 +29,7 @@ for _ in range(2):
         
         # state and reward will be none for all actions but run
         # reward will be 1 if task success
+        print(script[f])
         state, reward, _, _ = p.step(actions[script[f]])
         if state is not None:
             print(reward)
