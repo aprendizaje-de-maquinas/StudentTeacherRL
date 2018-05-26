@@ -5,7 +5,7 @@ Angry birds type game for rl program creation
 import pygame
 from ple.games import base
 from blocks.blocks import Position, Direction, ForwardBlock, TurnLeft, TurnRight, WhileBlock, ConditionBlock, ClearAhead, EndBlock
-from pygame.constants import K_r, K_f, K_a, K_l, KEYDOWN, NOFRAME, QUIT
+from pygame.constants import *
 import os
 import sys
 import gym
@@ -72,12 +72,11 @@ class BirdPlayer(pygame.sprite.Sprite):
     def update(self, _):
         self.game_tick += 1
         if self.executingProgram:
-            print(self.plan)
             if len(self.plan) == 0:
                 return
 
             if self.inLoop:
-                if self.plan[self.loopPtr] is EndBlock:
+                if type(self.plan[self.loopPtr]) is EndBlock:
                     if self.plan[1](self): # only check if condition after the last block
                         self.loopPtr = 2 # 3rd element should be start of loop body
                     else:
@@ -87,18 +86,22 @@ class BirdPlayer(pygame.sprite.Sprite):
                     self.plan[self.loopPtr](self)
                     self.loopPtr += 1
 
-            if self.plan[0] is WhileBlock:
-                if len(self.plan) > 3 and self.plan[1] is ConditionBlock and self.plan[2] is not EndBlock:
+            elif type(self.plan[0]) is WhileBlock:
+                if len(self.plan) > 3 and issubclass(type(self.plan[1]), ConditionBlock) and type(self.plan[2]) is not EndBlock:
                     if self.plan[1](self):
+                        self.inLoop = True
                         self.loopPtr = 2
                     else: # no support for nested loops yet
                         # Find skip the block
                         for i in range(len(self.plan)):
-                            if self.plan[i] is EndBlock:
+                            if type(self.plan[i]) is EndBlock:
                                 self.plan = self.plan[i+1:]
                                 break
                 else:
                     self.died = True
+                    self.finished = True
+                    self.plan = []
+                    self.executingProgram = False
                     return
             else:
                 self.plan.pop(0)(self)
@@ -194,7 +197,10 @@ class AngryBird(base.PyGameWrapper):
             "forward": K_f,
             "run": K_r,
             "right": K_a,
-            "left": K_l
+            "left": K_l,
+            "while": K_w,
+            "ifClear": K_c,
+            "end": K_e
         }
         self.actions = actions
         self.num_blocks = num_blocks
@@ -327,6 +333,12 @@ class AngryBird(base.PyGameWrapper):
                     self.player.addBlock(TurnLeft())
                 elif key == self.actions['right']:
                     self.player.addBlock(TurnRight())
+                elif key == self.actions['while']:
+                    self.player.addBlock(WhileBlock())
+                elif key == self.actions['ifClear']:
+                    self.player.addBlock(ClearAhead())
+                elif key == self.actions['end']:
+                    self.player.addBlock(EndBlock())
                 elif key == self.actions['run']:
                     self.player.executeProgram()
 

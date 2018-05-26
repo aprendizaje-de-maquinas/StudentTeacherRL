@@ -2,7 +2,6 @@ import gym
 import pygame
 import AngryBirds
 
-
 p = gym.make('AngryBirds-v0').unwrapped #v0 has display with render
 #p = gym.make('AngryBirds-v1')  #v1 has no display with render
 
@@ -13,14 +12,17 @@ p.render()
 
 
 #script = [ "forward", "forward", "forward", "forward", "forward", "run", "run", "run", "run", "run" ]
-script = [ 'forward' , 'left' , 'right', 'forward', 'run']
-
+# script = [ 'forward' , 'left' , 'right', 'forward', 'run']
+script = ['while', 'ifClear', 'forward', 'end', 'run']
 
 actions = {
     "forward": 0,
     "run": 1,
     "right": 2,
-    "left": 3
+    "left": 3,
+    "while": 4,
+    "ifClear": 5,
+    "end": 6
 }
 
 

@@ -188,6 +188,8 @@ class ClearAhead(ConditionBlock):
         newPosition = Position(nextx, nexty, pos.orientation, pos.xborder, pos.yborder)
         return (not newPosition.out_of_bounds()) and agent.world[nextx][nexty] == 'E'
             
+    def __repr__(self, indent=0):    
+        return ''.join(['\t' for _ in range(indent)]) + 'ifClearAhead'
 '''
    Implements a for loop over a range
    Goes from the lowerbound to upper bound with a given
@@ -225,15 +227,14 @@ class RangeForBlock(object):
 class WhileBlock(object):
 
     def __init__(self, body=None):
-        self.cond = cond
-
+        # self.cond = cond
         if body is None: self.body = NullBlock()
         else: self.body = body
         
         return
 
     def __call__(self):
-        while self.cond():
+        while self.cond(): # not used rn
             self.body()
         return
 
@@ -241,7 +242,7 @@ class WhileBlock(object):
 
         tabs = ''.join(['\t' for _ in range(indent)])
 
-        return tabs + 'while {}:'.format(self.cond) + '\n' + self.body.__repr__(indent=indent+1)
+        return tabs + 'while{}'
 
 
 class EndBlock(NullBlock):
