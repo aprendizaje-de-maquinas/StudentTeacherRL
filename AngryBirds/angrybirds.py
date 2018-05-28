@@ -5,8 +5,8 @@ Angry birds type game for rl program creation
 import pygame
 from ple import PLE
 from ple.games import base
-from blocks.blocks import Position, Direction, ForwardBlock, TurnLeft, TurnRight
-from pygame.constants import K_r, K_f, K_a, K_l, K_n, KEYDOWN, NOFRAME, QUIT
+from blocks.blocks import Position, Direction, ForwardBlock, TurnLeft, TurnRight, WhileBlock, ConditionBlock, ClearAhead, EndBlock
+from pygame.constants import *
 import os
 import sys
 import gym
@@ -39,6 +39,9 @@ class BirdPlayer(pygame.sprite.Sprite):
         self.position = Position(init_pos[0], init_pos[1], Direction(Direction.RIGHT))
         self.orientation = Direction.RIGHT
 
+        self.inLoop = False
+        self.loopPtr = -1
+
         self.executingProgram = False
         self.finished = False
         self.died = False
@@ -48,18 +51,60 @@ class BirdPlayer(pygame.sprite.Sprite):
         if not self.executingProgram:
             self.plan.append(block)
 
+    def balancedBlocks(self, plan = []):
+        count = 0
+        for block in plan:
+            if block is WhileBlock:
+                count += 1
+            elif block is EndBlock:
+                count -= 1
+            if count < 0:
+                return False
+        return count == 0
+
     def executeProgram(self):
         if not self.finished:
-            self.executingProgram = True
+            if not self.balancedBlocks(self.plan):
+                self.finished = True
+            else:
+                self.executingProgram = True
 
     def update(self, _):
         self.game_tick += 1
         if self.executingProgram:
-
             if len(self.plan) == 0:
                 return
 
-            self.plan.pop(0)(self)
+            if self.inLoop:
+                if type(self.plan[self.loopPtr]) is EndBlock:
+                    if self.plan[1](self): # only check if condition after the last block
+                        self.loopPtr = 2 # 3rd element should be start of loop body
+                    else:
+                        self.inLoop = False
+                        self.plan = self.plan[(self.loopPtr + 1):]
+                else:
+                    self.plan[self.loopPtr](self)
+                    self.loopPtr += 1
+
+            elif type(self.plan[0]) is WhileBlock:
+                if len(self.plan) > 3 and issubclass(type(self.plan[1]), ConditionBlock) and type(self.plan[2]) is not EndBlock:
+                    if self.plan[1](self):
+                        self.inLoop = True
+                        self.loopPtr = 2
+                    else: # no support for nested loops yet
+                        # Find skip the block
+                        for i in range(len(self.plan)):
+                            if type(self.plan[i]) is EndBlock:
+                                self.plan = self.plan[i+1:]
+                                break
+                else:
+                    self.died = True
+                    self.finished = True
+                    self.plan = []
+                    self.executingProgram = False
+                    return
+            else:
+                self.plan.pop(0)(self)
 
             if self.position.out_of_bounds() or self.world[self.position.x][self.position.y] == 'W':
                 self.died = True
@@ -67,8 +112,6 @@ class BirdPlayer(pygame.sprite.Sprite):
                 self.executingProgram = False
                 self.plan = []
                 self.finished = True
-                
-
 
 
     def draw(self, screen):
@@ -156,7 +199,10 @@ class AngryBird(base.PyGameWrapper):
             "forward": K_f,
             "run": K_r,
             "right": K_a,
-            "left": K_l
+            "left": K_l,
+            "while": K_w,
+            "ifClear": K_c,
+            "end": K_e
         }
         self.actions = actions
         self.num_blocks = num_blocks
@@ -290,6 +336,12 @@ class AngryBird(base.PyGameWrapper):
                     self.player.addBlock(TurnLeft())
                 elif key == self.actions['right']:
                     self.player.addBlock(TurnRight())
+                elif key == self.actions['while']:
+                    self.player.addBlock(WhileBlock())
+                elif key == self.actions['ifClear']:
+                    self.player.addBlock(ClearAhead())
+                elif key == self.actions['end']:
+                    self.player.addBlock(EndBlock())
                 elif key == self.actions['run']:
                     self.player.executeProgram()
 
