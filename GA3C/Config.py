@@ -1,0 +1,41 @@
+
+class Config:
+
+
+    GAME = 'AngryBirds-v1'
+
+    AGENTS = 10
+    PREDICTORS = 2
+    TRAINERS = 1
+
+    # work on enabling multiple gpus using horovod
+    DEVICE = 'gpu:1'
+
+    DISCOUNT = 0.99
+    TIME_MAX = 10
+
+    MAX_QUEUE_SIZE = 100
+    PREDICTION_BATCH_SIZE = AGENTS // PREDICTORS
+
+    IMAGE_WIDTH = 224
+    IMAGE_HEIGHT = 224
+
+    EPISODES = 400000
+
+    BETA = 0.01
+
+    LEARNING_RATE = 0.0003
+
+    RMSPROP_DECAY = 0.99
+    RMSPROP_MOMENTUM = 0.0
+
+    LOG_EPSILON = 1e-6
+    TRAINING_MIN_BATCH_SIZE = 10
+
+    TENSORBOARD_UPDATE_FREQUENCY = 10
+
+    SAVE_FREQUENCY = 100000
+
+    PRINT_STATS_FREQUENCY = 1
+    STAT_ROLLING_MEAN_WINDOW = 1000
+

@@ -16,17 +16,18 @@ p.render()
 script = ['while', 'ifClear', 'forward', 'end', 'run']
 
 actions = {
-    "forward": 0,
-    "run": 1,
-    "right": 2,
-    "left": 3,
-    "while": 4,
-    "ifClear": 5,
-    "end": 6
+    "noop": 0,
+    "forward": 1,
+    "run": 2,
+    "right": 3,
+    "left": 4,
+    "while": 5,
+    "ifClear": 6,
+    "end": 7
 }
 
 
-for _ in range(2):
+for _ in range(10):
     for f in range(len(script)):
         
         # state and reward will be none for all actions but run
