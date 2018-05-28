@@ -3,14 +3,14 @@ Angry birds type game for rl program creation
 '''
 
 import pygame
+from ple import PLE
 from ple.games import base
 from blocks.blocks import Position, Direction, ForwardBlock, TurnLeft, TurnRight
-from pygame.constants import K_r, K_f, K_a, K_l, KEYDOWN, NOFRAME, QUIT
+from pygame.constants import K_r, K_f, K_a, K_l, K_n, KEYDOWN, NOFRAME, QUIT
 import os
 import sys
 import gym
 from gym import spaces
-from ple import PLE
 import numpy as np
 import time
 
@@ -124,6 +124,7 @@ class Backdrop():
             self.wood_image = image_assets["wood"]
             self.pig_image = image_assets["pig"]
         except:
+            print('passing')
             pass
         
         self.map = map
@@ -151,6 +152,7 @@ class AngryBird(base.PyGameWrapper):
     def __init__(self, width=256, height=256, num_blocks=8, render=True):
         
         actions = {
+            "noop": K_n,
             "forward": K_f,
             "run": K_r,
             "right": K_a,
@@ -171,8 +173,8 @@ class AngryBird(base.PyGameWrapper):
         self.images = {}
 
         # so we can preload images
-        if render:
-            pygame.display.set_mode((1, 1), NOFRAME)
+        #if render:
+        pygame.display.set_mode((1, 1), NOFRAME)
 
         self.backdrop = None
         self.player = None
@@ -185,10 +187,11 @@ class AngryBird(base.PyGameWrapper):
 
         self._load_map()
 
-        if render:
-            self._load_images()
-        else:
-            self.images['player'] = None
+        self._load_images()
+        #if render:
+        #   self._load_images()
+        #else:
+        #   self.images['player'] = None
             
         self.level = 0
         self.reward = 0
@@ -391,7 +394,7 @@ class AngryBirdEnv(gym.Env):
             self.render()
         return state
 
-    def render(self, mode='human', close=False):
+    def render(self, mode='rgb_array', close=False):
         '''
         Performs the rendering for the gym env
         '''
