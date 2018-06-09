@@ -244,6 +244,21 @@ class WhileBlock(object):
 
         return tabs + 'while{}'
 
+class WhileClearAheadBlock(WhileBlock):
+    def __call__(self, agent):
+        pos = agent.position
+        nextx, nexty = pos.x, pos.y
+        if pos.orientation == Direction.UP:
+            nextx -= 1
+        elif pos.orientation == Direction.LEFT:
+            nexty -= 1
+        elif pos.orientation == Direction.DOWN:
+            nextx += 1
+        else:
+            nexty += 1
+        newPosition = Position(nextx, nexty, pos.orientation, pos.xborder, pos.yborder)
+        return (not newPosition.out_of_bounds()) and agent.world[nextx][nexty] == 'E'
+
 
 class EndBlock(NullBlock):
     def __repr__(self, indent=0):
