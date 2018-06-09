@@ -5,8 +5,6 @@ import AngryBirds
 p = gym.make('AngryBirds-v0').unwrapped #v0 has display with render
 #p = gym.make('AngryBirds-v1')  #v1 has no display with render
 
-
-
 p.reset()
 p.render()
 
