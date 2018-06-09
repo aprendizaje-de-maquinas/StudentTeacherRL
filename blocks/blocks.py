@@ -97,7 +97,7 @@ class NullBlock(object):
     def __init__(self):
         return
 
-    def __call__(self):
+    def __call__(self, agent):
         return
 
     def __repr__(self, indent=0):
@@ -120,7 +120,7 @@ class IfElseBlock(object):
         
         return
 
-    def __call__(self):
+    def __call__(self, agent):
         if self.cond:
             self._if()
         else:
@@ -147,7 +147,7 @@ class IfBlock(object):
         
         return
 
-    def __call__(self):
+    def __call__(self, agent):
         if self.cond:
             self._if()
 
@@ -186,7 +186,7 @@ class ClearAhead(ConditionBlock):
         else:
             nexty += 1
         newPosition = Position(nextx, nexty, pos.orientation, pos.xborder, pos.yborder)
-        return (not newPosition.out_of_bounds()) and agent.world[nextx][nexty] == 'E'
+        return agent.world[nextx][nexty] != 'W'
             
     def __repr__(self, indent=0):    
         return ''.join(['\t' for _ in range(indent)]) + 'ifClearAhead'
@@ -212,7 +212,7 @@ class RangeForBlock(object):
         
         return
 
-    def __call__(self):
+    def __call__(self, agent):
         for _ in range(self.lowerBound, self.upperBound, self.step):
             self.body()
         return
@@ -233,9 +233,9 @@ class WhileBlock(object):
         
         return
 
-    def __call__(self):
-        while self.cond(): # not used rn
-            self.body()
+    def __call__(self, agent):
+        #while self.cond(): # not used rn
+        #   self.body()
         return
 
     def __repr__(self, indent=0):
@@ -341,7 +341,7 @@ class StackedBlock(object):
         self.blocks.append(block)
         return
 
-    def __call__(self):
+    def __call__(self, agent):
         for block in self.blocks:
             block()
         return

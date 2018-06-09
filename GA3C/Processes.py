@@ -29,6 +29,8 @@ class ProcessAgent(Process):
         self.wait_q = Queue(maxsize=1)
         self.exit_flag = Value('i', 0)
 
+        self.done_cntr = 0
+
     @staticmethod
     def _accumulate_rewards(experiences, discount_factor, terminal_reward):
         reward_sum = terminal_reward
@@ -69,10 +71,12 @@ class ProcessAgent(Process):
         return x_, r_, a_, length
 
     def predict(self, state):
+        #print('predicting')
         # put the state in the prediction q
         self.prediction_q.put((self.id, state))
         # wait for the prediction to come back
         p, v = self.wait_q.get()
+        #print('got')
         #print('out')
         return p, v
 
@@ -97,16 +101,21 @@ class ProcessAgent(Process):
         while not done:
             # very first few frames
             if self.env.current_state is None:
+                #print('loop')
                 self.env.step(0)  # 0 == NOOP
                 continue
 
             prediction, value = self.predict(self.env.current_state)
-
+            try:
+                if value == None:
+                    continue
+            except:
+                pass
 
             action = self.select_action(prediction)
-            if action[-1] != 2:
-                action = action[:-1]
-                action.append(2)
+            #if action[-1] != 2:
+            #   action = action[:-1]
+            #   action.append(2)
 
             states = []
             for a in action:
@@ -132,8 +141,10 @@ class ProcessAgent(Process):
             x_, r_, a_, l_ = self.convert_data(exp)
             if x_ is not None:
                 #print(exp.state)
-                #print('is none')
                 yield x_, r_, a_, l_, reward_sum
+            else:
+                print('is none')
+
 
             # reset the tmax count
             time_count = 0
@@ -143,7 +154,17 @@ class ProcessAgent(Process):
 
             time_count += 1
 
-            self.env.reset()
+            if done:
+                self.done_cntr += 1
+                if self.done_cntr == 100:
+                    self.env.reset_hard()
+                    self.done_cntr = 0
+                else:
+                    self.env.reset()
+            else:
+                self.env.reset()
+
+            done = True
 
     def run(self):
         # randomly sleep up to 1 second. helps agents boot smoothly.
@@ -158,6 +179,8 @@ class ProcessAgent(Process):
                 total_length += len(r_) + 1  # +1 for last frame that we drop
                 self.training_q.put((x_, r_, a_, [l_]))
             self.episode_log_q.put((total_reward, total_length))
+
+        print('Exiting')
 
 
 class ProcessStats(Process):
@@ -206,3 +229,4 @@ class ProcessStats(Process):
                        self.episode_count.value, reward,
                        rolling_reward / results_q.qsize()))
                 sys.stdout.flush()
+        print('Exit stats')

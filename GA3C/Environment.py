@@ -58,6 +58,13 @@ class Environment:
         self._update_frame_q(self.game.reset())
         self.previous_state = self.current_state = None
 
+    def reset_hard(self):
+        self.total_reward = 0
+        self.frame_q.queue.clear()
+        self.game.env.reset_hard()
+        self._update_frame_q(self.game.reset())
+        self.previous_state = self.current_state = None
+
     def step(self, action):
         observation, reward, done, _ = self.game.step(action)
 

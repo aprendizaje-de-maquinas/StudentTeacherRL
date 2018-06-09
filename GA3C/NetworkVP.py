@@ -14,7 +14,9 @@ class NetworkVP:
 
     def __init__(self, device, model_name, num_actions):
 
-        self.model_name = model_name
+        filenames= list(os.listdir ("./logs"))
+        
+        self.model_name = model_name + '-{}'.format(len(filenames))
         self.num_actions = num_actions
 
         self.log_eps = Config.LOG_EPSILON
@@ -85,13 +87,18 @@ class NetworkVP:
         _shape = _seed_image.get_shape()[-1].value
         _lstm = tf.contrib.rnn.LSTMCell(_shape)
 
+        _lstm = tf.contrib.rnn.AttentionCellWrapper(_lstm, 3)
+
 
         # change the H to be the encoding of the image
         __initial_state = _lstm.zero_state(self.batch_size, tf.float32)
 
-        #seed initial state with the encoding of the initial game state
-        _initial_state = tf.contrib.rnn.LSTMStateTuple(__initial_state.c, _seed_image)
 
+        print(__initial_state)
+        
+        #seed initial state with the encoding of the initial game state
+        _initial_state = tf.contrib.rnn.LSTMStateTuple(__initial_state[0].c, _seed_image)
+        _initial_state = (_initial_state,) + __initial_state[1:]
 
         #tf.contrib.seq2seq.InferenceHelper
         _sample_helper = CustomHelper(sample_fn,
@@ -110,7 +117,7 @@ class NetworkVP:
         _decoded_outputs, _final_states, _lengths = tf.contrib.seq2seq.dynamic_decode(
             _sample_decoder,
             output_time_major=True,
-            impute_finished=True,
+            impute_finished=False,
             maximum_iterations=Config.TIME_MAX,
             parallel_iterations=32,
             swap_memory=False,
@@ -194,18 +201,17 @@ class NetworkVP:
                                             momentum=Config.RMSPROP_MOMENTUM
         )
 
-        _grads, _vars = zip(*_optim.compute_gradients(_total_cost))
-
-        #with tf.device('gpu:0'):
-        _clipped = [
-            None if gradient is None else tf.clip_by_norm(gradient, 5.0)
-            for gradient in _grads]
-        #_clipped = _grads
-        #_clipped, _ = tf.clip_by_global_norm(_grads, 5.0)
-        
-
-        _train_op = _optim.apply_gradients(zip(_clipped, _vars))
-        #_train_op = _optim.minimize(_total_cost, global_step=self.global_step)
+        with tf.device('gpu:0'):
+            _grads, _vars = zip(*_optim.compute_gradients(_total_cost))
+            
+            #with tf.device('gpu:0'):
+            #_clipped = [
+            #   None if gradient is None else tf.clip_by_norm(gradient, 5.0)
+            #   for gradient in _grads]
+            #_clipped = _grads
+            _clipped, _ = tf.clip_by_global_norm(_grads, 5.0)
+            _train_op = _optim.apply_gradients(zip(_clipped, _vars), global_step=self.global_step)
+            #_train_op = _optim.minimize(_total_cost, global_step=self.global_step)
 
         self.imagination_cost = im
         self.total_cost = _total_cost

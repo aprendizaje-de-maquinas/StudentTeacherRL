@@ -35,7 +35,7 @@ for _ in range(10):
         print(script[f])
         state, reward, _, _ = p.step(actions[script[f]])
         if state is not None:
-            print(reward)
+            print('Reward', reward)
         p.render()
 
 

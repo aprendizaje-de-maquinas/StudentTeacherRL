@@ -4,7 +4,7 @@ class Config:
 
     GAME = 'AngryBirds-v1'
 
-    AGENTS = 10
+    AGENTS = 8
     PREDICTORS = 2
     TRAINERS = 1
 
@@ -12,7 +12,7 @@ class Config:
     DEVICE = 'gpu:1'
 
     DISCOUNT = 0.99
-    TIME_MAX = 10
+    TIME_MAX = 5
 
     MAX_QUEUE_SIZE = 100
     PREDICTION_BATCH_SIZE = AGENTS // PREDICTORS
@@ -30,7 +30,6 @@ class Config:
     RMSPROP_MOMENTUM = 0.0
 
     LOG_EPSILON = 1e-6
-    TRAINING_MIN_BATCH_SIZE = 10
 
     TENSORBOARD_UPDATE_FREQUENCY = 10
 

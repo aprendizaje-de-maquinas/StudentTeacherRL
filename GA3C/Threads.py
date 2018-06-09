@@ -21,6 +21,8 @@ class ThreadPredictor(Thread):
             dtype=np.float32)
 
         while not self.exit_flag:
+            #print ('prediction size: ' , self.server.prediction_q.qsize())
+
             ids[0], states[0] = self.server.prediction_q.get()
 
             size = 1
@@ -28,15 +30,21 @@ class ThreadPredictor(Thread):
                 ids[size], states[size] = self.server.prediction_q.get()
                 size += 1
 
+
             batch = states[:size]
             p, v = self.server.model.predict_p_and_v(batch)
 
             p = np.transpose(p, [1,0,2])
             v = np.transpose(v, [1,0,2])
 
+            #print(self.id, 'alive')
             for i in range(size):
                 if ids[i] < len(self.server.agents):
                     self.server.agents[ids[i]].wait_q.put((p[i], v[i]))
+                else:
+                    print('DAMN')
+
+        print('Exiting Predictor')
 
 
 class ThreadTrainer(Thread):

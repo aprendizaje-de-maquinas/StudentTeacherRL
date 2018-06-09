@@ -102,6 +102,8 @@ class Server:
 
             time.sleep(0.01)
 
+        print('EXIT SERVER')
+
 
         # make sure we save the last one
         self.model.save(self.stats.episode_count.value)
