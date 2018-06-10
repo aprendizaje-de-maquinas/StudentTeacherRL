@@ -3,7 +3,7 @@ import pygame
 import AngryBirds
 
 p = gym.make('AngryBirds-v0').unwrapped #v0 has display with render
-#p = gym.make('AngryBirds-v1')  #v1 has no display with render
+# p = gym.make('AngryBirds-v1')  #v1 has no display with render
 
 p.reset()
 p.render()
@@ -11,7 +11,7 @@ p.render()
 
 #script = [ "forward", "forward", "forward", "forward", "forward", "run", "run", "run", "run", "run" ]
 # script = [ 'forward' , 'left' , 'right', 'forward', 'run']
-script = ['while', 'ifClear', 'forward', 'end', 'run']
+script = ['while_clear_ahead', 'forward', 'end', 'forward', 'run']
 
 actions = {
     "noop": 0,
@@ -19,9 +19,8 @@ actions = {
     "run": 2,
     "right": 3,
     "left": 4,
-    "while": 5,
-    "ifClear": 6,
-    "end": 7
+    "while_clear_ahead": 5,
+    "end": 6
 }
 
 

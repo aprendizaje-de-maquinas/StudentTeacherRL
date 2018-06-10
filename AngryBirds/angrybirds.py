@@ -5,7 +5,7 @@ Angry birds type game for rl program creation
 import pygame
 from ple import PLE
 from ple.games import base
-from blocks.blocks import Position, Direction, ForwardBlock, TurnLeft, TurnRight, WhileBlock, ConditionBlock, ClearAhead, EndBlock
+from blocks.blocks import Position, Direction, ForwardBlock, TurnLeft, TurnRight, WhileBlock, WhileClearAheadBlock, EndBlock
 from pygame.constants import *
 import os
 import sys
@@ -17,7 +17,7 @@ import time
 from AngryBirds.bird_envs import SimpleEnv
 
 
-os.environ["SDL_VIDEODRIVER"] = "dummy"
+#os.environ["SDL_VIDEODRIVER"] = "dummy"
 STATIC_MAP = False
 
 class BirdPlayer(pygame.sprite.Sprite):
@@ -84,23 +84,27 @@ class BirdPlayer(pygame.sprite.Sprite):
                 if self.game_tick > 100:
                     raise  ValueError('Too many ticks')
                 if self.inLoop:
-                    if type(self.plan[self.loopPtr]) is EndBlock:
-                        if self.plan[1](self): # only check if condition after the last block
-                            self.loopPtr = 2 # 3rd element should be start of loop body
+                    if type(self.plan[self.loopPtr]) == EndBlock:
+                        if self.plan[0](self): # only check if condition after the last block
+                            self.loopPtr = 1 # 2nd element should be start of loop body
                         else:
                             self.inLoop = False
                             self.plan = self.plan[(self.loopPtr + 1):]
+                    elif type(self.plan[self.loopPtr]) == WhileBlock:
+                        self.died = True
+                        self.finished = True
+                        self.plan = []
+                        self.executingProgram = False
+                        return
+
                     else:
                         self.plan[self.loopPtr](self)
                         self.loopPtr += 1
 
-                elif type(self.plan[0]) is WhileBlock:
-
-                    if len(self.plan) < 3:
-                        raise ValueError("malformed loop not enough")
-                    if not type(self.plan[1]) == ClearAhead:
-                        raise ValueError("malformed loop no condition")
-                    if type(self.plan[2]) == EndBlock:
+                elif issubclass(type(self.plan[0]), WhileBlock):
+                    if len(self.plan) < 2:
+                        raise ValueError("malformed loop not enough") 
+                    if type(self.plan[1]) == EndBlock:
                         raise ValueError("malformed loop no body")
                     valid = False
                     for bl in self.plan:
@@ -109,9 +113,7 @@ class BirdPlayer(pygame.sprite.Sprite):
                             break
                     if not valid:
                         raise ValueError("malformed loop no end")
-                    
-                    #if len(self.plan) > 3 and issubclass(type(self.plan[1]), ConditionBlock) and type(self.plan[2]) is not EndBlock:
-                    if self.plan[1](self):
+                    if self.plan[0](self):
                         self.inLoop = True
                         self.loopPtr = 2
                     else: # no support for nested loops yet
@@ -120,12 +122,6 @@ class BirdPlayer(pygame.sprite.Sprite):
                             if type(self.plan[i]) is EndBlock:
                                 self.plan = self.plan[i+1:]
                                 break
-                    #else:
-                    #   self.died = True
-                    #   self.finished = True
-                    #   self.plan = []
-                    #   self.executingProgram = False
-                    #   return
                 else:
                     self.plan.pop(0)(self)
             except Exception as e:
@@ -226,9 +222,8 @@ class AngryBird(base.PyGameWrapper):
             "run": K_r,
             "right": K_a,
             "left": K_l,
-            #"while": K_w,
-            #"ifClear": K_c,
-            #"end": K_e
+            "while_clear_ahead": K_w,
+            "end": K_e
         }
         self.actions = actions
         self.num_blocks = num_blocks
@@ -363,10 +358,8 @@ class AngryBird(base.PyGameWrapper):
                     self.player.addBlock(TurnLeft())
                 elif 'right' in self.actions and key == self.actions['right']:
                     self.player.addBlock(TurnRight())
-                elif 'while' in self.actions and key == self.actions['while']:
-                    self.player.addBlock(WhileBlock())
-                elif 'ifclear' in self.actions and key == self.actions['ifClear']:
-                    self.player.addBlock(ClearAhead())
+                elif 'while_clear_ahead' in self.actions and key == self.actions['while_clear_ahead']:
+                    self.player.addBlock(WhileClearAheadBlock())
                 elif 'end' in self.actions and key == self.actions['end']:
                     self.player.addBlock(EndBlock())
                 elif 'run' in self.actions and key == self.actions['run']:
@@ -431,7 +424,6 @@ class AngryBirdEnv(gym.Env):
         reward = self.game_state.act(list(self._action_set)[a])
         if self.display_screen:
             self.render()
-
         reward = self.game_state.game.getScore() and not self.game_state.game.player.died
 
         terminal = (self.game_state.game_over() or self.game_state.game.player.died)
