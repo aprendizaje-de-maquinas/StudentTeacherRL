@@ -257,7 +257,7 @@ class WhileClearAheadBlock(WhileBlock):
         else:
             nexty += 1
         newPosition = Position(nextx, nexty, pos.orientation, pos.xborder, pos.yborder)
-        return (not newPosition.out_of_bounds()) and agent.world[nextx][nexty] == 'E'
+        return (not newPosition.out_of_bounds()) and agent.world[nextx][nexty] != 'W'
 
 
 class EndBlock(NullBlock):

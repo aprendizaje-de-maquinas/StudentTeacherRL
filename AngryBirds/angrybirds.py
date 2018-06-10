@@ -130,7 +130,7 @@ class BirdPlayer(pygame.sprite.Sprite):
 
             if self.position.out_of_bounds() or self.world[self.position.x][self.position.y] == 'W':
                 self.died = True
-            if len(self.plan) == 0: #self.position.out_of_bounds():
+            if len(self.plan) == 0 or self.world[self.position.x][self.position.y] == 'P': #self.position.out_of_bounds():
                 self.executingProgram = False
                 self.plan = []
                 self.finished = True
